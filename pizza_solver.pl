@@ -9,36 +9,52 @@ sample_pizza([
 encode_ingredient(tomato, 0).
 encode_ingredient(mushroom, 1).
 
-solve_sample(Slices, TotalArea) :-
+new_slice(MaxW, MaxH, slice(X, W, Y, H)) :-
+	% constrain X and W on pizza width
+	X #>= 0,
+	W #>= 1,
+	X + W #=< MaxW,
+	% constrain Y and H on pizza height
+	Y #>= 0,
+	H #>= 1,
+	Y + H #=< MaxH.
+	
+constrain_area(slice(_, W, _, H), Area) :- 
+	Area #= W * H.
+	
+remove_symmetry([]).
+remove_symmetry([_]).
+remove_symmetry([S1,S2|Ss]) :-
+	remove_symmetry(S1, S2),
+	remove_symmetry([S2|Ss]).
+	
+remove_symmetry(slice(X1, _, Y1, _), slice(X2, _, Y2, _)) :-
+	X1 #=< X2,
+	Y1 #=< Y2.
+
+solve_sample(Slices, TotalSliceArea) :-
+	% inputs
+	R = 3,
+	C = 5,
     % variables
-	SliceVars = [Slice1X, Slice1Y, Slice1W, Slice1H, Slice2X, Slice2Y, Slice2W, Slice2H, Slice3X, Slice3Y, Slice3W, Slice3H],
-    Slices = [slice(Slice1X, Slice1W, Slice1Y, Slice1H), slice(Slice2X, Slice2W, Slice2Y, Slice2H), slice(Slice3X, Slice3W, Slice3Y, Slice3H)],
+	new_slice(C, R, Slice1),
+	new_slice(C, R, Slice2),
+	new_slice(C, R, Slice3),
+    Slices = [Slice1, Slice2, Slice3],
     % remove repeated solutions (different slice order)
-	Slice1X #=< Slice2X,
-	Slice2X #=< Slice3X,
-	Slice1Y #=< Slice2Y,
-	Slice2Y #=< Slice3Y,
-    % setup slice size and position ranges
-	[Slice1X, Slice2X, Slice3X] ins 0..3,
-	[Slice1Y, Slice2Y, Slice3Y] ins 0..1,
-	[Slice1H, Slice2H, Slice3H] ins 1..3,
-	[Slice1W, Slice2W, Slice3W] ins 1..3,
-	Slice1X + Slice1W #=< 5,
-	Slice2X + Slice2W #=< 5,
-	Slice3X + Slice3W #=< 5,
-	Slice1Y + Slice1H #=< 3,
-	Slice2Y + Slice2H #=< 3,
-	Slice3Y + Slice3H #=< 3,
+	remove_symmetry(Slices),
     % constrain slices to be disjoint
 	disjoint2(Slices),
     % define total slice area range
-	AreaSlice1 #= Slice1W * Slice1H,
-	AreaSlice2 #= Slice2W * Slice2H,
-	AreaSlice3 #= Slice3W * Slice3H,
-	sum([AreaSlice1, AreaSlice2, AreaSlice3], #=, TotalArea),
-	TotalArea in 0..15,
+	TotalPizzaArea is R * C,
+	TotalSliceArea in 0..TotalPizzaArea,
+	constrain_area(Slice1, Area1),
+	constrain_area(Slice2, Area2),
+	constrain_area(Slice3, Area3),
+	sum([Area1, Area2, Area3], #=, TotalSliceArea),
     % get possible slice combinations, in order of max TotalArea
-	labeling([max(TotalArea)], SliceVars),
+	term_variables(Slices, SliceVars),
+	labeling([max(TotalSliceArea)], SliceVars),
     % setup min ingredient variables
 	encode_ingredient(tomato, TomatoValue),
 	encode_ingredient(mushroom, MushroomValue),
@@ -51,26 +67,26 @@ solve_sample(Slices, TotalArea) :-
     % read pizza
 	sample_pizza(Pizza),
     % get variables for each slice and had restriction on min ingredients
-	pieces_in_slice(Pizza, Slice1X, Slice1W, Slice1Y, Slice1H, Pieces1),
+	pieces_in_slice(Pizza, Slice1, Pieces1),
 	global_cardinality(Pieces1, [MushroomValue-MinMushroom1,TomatoValue-MinTomato1]),
-	pieces_in_slice(Pizza, Slice2X, Slice2W, Slice2Y, Slice2H, Pieces2),
+	pieces_in_slice(Pizza, Slice2, Pieces2),
 	global_cardinality(Pieces2, [MushroomValue-MinMushroom2,TomatoValue-MinTomato2]),
-	pieces_in_slice(Pizza, Slice3X, Slice3W, Slice3Y, Slice3H, Pieces3),
+	pieces_in_slice(Pizza, Slice3, Pieces3),
 	global_cardinality(Pieces3, [MushroomValue-MinMushroom3,TomatoValue-MinTomato3]).
 	
-pieces_in_slice([], _, _, _, _, []).
-pieces_in_slice([_|_], _, _, _, 0, []).
-pieces_in_slice([P|Ps], X, W, 0, H, Cut) :-
+pieces_in_slice([], slice(_, _, _, _), []).
+pieces_in_slice([_|_], slice(_, _, _, 0), []).
+pieces_in_slice([P|Ps], slice(X, W, 0, H), Cut) :-
 	H > 0,
 	pieces_in_line(P, X, W, CutP),
 	Hm1 is H - 1,
-	pieces_in_slice(Ps, X, W, 0, Hm1, CutPs),
+	pieces_in_slice(Ps, slice(X, W, 0, Hm1), CutPs),
 	append(CutP, CutPs, Cut).
-pieces_in_slice(Pizza, X, W, Y, H, Pieces) :-
+pieces_in_slice(Pizza, slice(X, W, Y, H), Pieces) :-
 	Y > 0,
 	H > 0,
 	Ym1 is Y - 1,
-	pieces_in_slice(Pizza, X, W, Ym1, H, Pieces).
+	pieces_in_slice(Pizza, slice(X, W, Ym1, H), Pieces).
 	
 pieces_in_line([], _, _, []).
 pieces_in_line([_|_], _, 0, []).
