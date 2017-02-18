@@ -19,8 +19,9 @@ new_slice(MaxW, MaxH, slice(X, W, Y, H)) :-
 	H #>= 1,
 	Y + H #=< MaxH.
 	
-constrain_area(slice(_, W, _, H), Area) :- 
-	Area #= W * H.
+constrain_area(MaxPieces, slice(_, W, _, H), Area) :- 
+	Area #= W * H,
+	Area #=< MaxPieces.
 	
 remove_symmetry([]).
 remove_symmetry([_]).
@@ -31,48 +32,50 @@ remove_symmetry([S1,S2|Ss]) :-
 remove_symmetry(slice(X1, _, Y1, _), slice(X2, _, Y2, _)) :-
 	X1 #=< X2,
 	Y1 #=< Y2.
+	
+constrain_ingredients(Pizza, MinMushroom, MinTomato, Slice) :-
+	pieces_in_slice(Pizza, Slice, Pieces),
+	encode_ingredient(tomato, TomatoValue),
+	encode_ingredient(mushroom, MushroomValue),
+	NMushroom #>= MinMushroom,
+	NTomato #>= MinTomato,
+	global_cardinality(Pieces, [MushroomValue-NMushroom,TomatoValue-NTomato]).
 
 solve_sample(Slices, TotalSliceArea) :-
+	sample_pizza(Pizza),
+	MinMushroom = 1,
+	MinTomato = 1,
+	MaxPieces = 6,
+	NSlices = 3,
+	solve_pizza(Pizza, MinMushroom, MinTomato, MaxPieces, NSlices, Slices, TotalSliceArea).
+	
+solve_pizza(Pizza, MinMushroom, MinTomato, MaxPieces, NSlices, Slices, TotalSliceArea) :-
+	% constrain slices
+	constrain_pizza_slices(Pizza, MaxPieces, NSlices, Slices, TotalSliceArea),
+	% get possible slice combinations, in order of max TotalArea
+	term_variables(Slices, SliceVars),
+	labeling([max(TotalSliceArea)], SliceVars),
+	% validate ingredients
+	maplist(constrain_ingredients(Pizza, MinMushroom, MinTomato), Slices).
+
+constrain_pizza_slices(Pizza, MaxPieces, NSlices, Slices, TotalSliceArea) :-
 	% inputs
-	R = 3,
-	C = 5,
+	length(Pizza, R),
+	Pizza = [P|Ps],
+	length(P, C),
     % variables
-	new_slice(C, R, Slice1),
-	new_slice(C, R, Slice2),
-	new_slice(C, R, Slice3),
-    Slices = [Slice1, Slice2, Slice3],
+	length(Slices, NSlices),
+	maplist(new_slice(C, R), Slices),
     % remove repeated solutions (different slice order)
 	remove_symmetry(Slices),
     % constrain slices to be disjoint
 	disjoint2(Slices),
     % define total slice area range
-	TotalPizzaArea is R * C,
+	TotalPizzaArea #= R * C,
 	TotalSliceArea in 0..TotalPizzaArea,
-	constrain_area(Slice1, Area1),
-	constrain_area(Slice2, Area2),
-	constrain_area(Slice3, Area3),
-	sum([Area1, Area2, Area3], #=, TotalSliceArea),
-    % get possible slice combinations, in order of max TotalArea
-	term_variables(Slices, SliceVars),
-	labeling([max(TotalSliceArea)], SliceVars),
-    % setup min ingredient variables
-	encode_ingredient(tomato, TomatoValue),
-	encode_ingredient(mushroom, MushroomValue),
-    MinMushroom1 #>= 1,
-	MinTomato1 #>= 1,
-	MinMushroom2 #>= 1,
-	MinTomato2 #>= 1,
-	MinMushroom3 #>= 1,
-	MinTomato3 #>= 1,
-    % read pizza
-	sample_pizza(Pizza),
-    % get variables for each slice and had restriction on min ingredients
-	pieces_in_slice(Pizza, Slice1, Pieces1),
-	global_cardinality(Pieces1, [MushroomValue-MinMushroom1,TomatoValue-MinTomato1]),
-	pieces_in_slice(Pizza, Slice2, Pieces2),
-	global_cardinality(Pieces2, [MushroomValue-MinMushroom2,TomatoValue-MinTomato2]),
-	pieces_in_slice(Pizza, Slice3, Pieces3),
-	global_cardinality(Pieces3, [MushroomValue-MinMushroom3,TomatoValue-MinTomato3]).
+	length(Areas, NSlices),
+	maplist(constrain_area(MaxPieces), Slices, Areas),
+	sum(Areas, #=, TotalSliceArea).
 	
 pieces_in_slice([], slice(_, _, _, _), []).
 pieces_in_slice([_|_], slice(_, _, _, 0), []).
@@ -99,4 +102,3 @@ pieces_in_line([_|Vs], X, W, CutVs) :-
 	W > 0,
 	Xm1 is X - 1,
 	pieces_in_line(Vs, Xm1, W, CutVs).
-	
