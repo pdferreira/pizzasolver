@@ -79,8 +79,8 @@ solve_pizza(Pizza, MinMushroom, MinTomato, MaxPieces, MaxSlices, Slices, TotalSl
 solvefromfile(Filename, MaxSlices, Slices, Area) :-
 	open(Filename, read, Stream),
 	readpizza(Stream, Rows, Columns, IngPerSlice, CellsPerSlice, Pizza),
-	solve_pizza(Pizza, IngPerSlice, IngPerSlice, CellsPerSlice, MaxSlices, Slices, Area),
-	close(Stream).
+	close(Stream),
+	solve_pizza(Pizza, IngPerSlice, IngPerSlice, CellsPerSlice, MaxSlices, Slices, Area).
 	
 solvefromstdin(MaxSlices, Slices, Area) :-
 	readpizza(user_input, Rows, Columns, IngPerSlice, CellsPerSlice, Pizza),
