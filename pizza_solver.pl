@@ -1,10 +1,20 @@
 :- use_module(library(clpfd)).
 
-sample_pizza([
-	[0, 0, 0, 0, 0],
-	[0, 1, 1, 1, 0],
-	[0, 0, 0, 0, 0]
-]).
+readpizza(Handle, Rows, Columns, IngPerSlice, CellsPerSlice, Pizza) :- 
+	read_string(Handle, "\n", "\r", _, String),
+	split_string(String, " ", "", L),
+	maplist(atom_number, L, [Rows, Columns, IngPerSlice, CellsPerSlice]),
+	length(Pizza, Rows),
+	maplist(readline(Columns, Handle), Pizza).
+
+readline(Columns, Handle, Row) :-
+	read_string(Handle, "\n", "\r", _, PizzaRow),
+	string_chars(PizzaRow, Chars),
+	length(Row, Columns),
+	maplist(encode_input_ingredient, Chars, Row).
+	
+encode_input_ingredient('T', 0).
+encode_input_ingredient('M', 1).
 
 encode_ingredient(tomato, 0).
 encode_ingredient(mushroom, 1).
@@ -12,11 +22,11 @@ encode_ingredient(mushroom, 1).
 new_slice(MaxW, MaxH, slice(X, W, Y, H)) :-
 	% constrain X and W on pizza width
 	X #>= 0,
-	W #>= 0, % allow empty slices
+	W #> 0, % allow empty slices
 	X + W #=< MaxW,
 	% constrain Y and H on pizza height
 	Y #>= 0,
-	H #>= 0, % allow empty slices
+	H #> 0, % allow empty slices
 	Y + H #=< MaxH,
 	% avoid considering all empty slices, just slice(0, 0, 0, 0)
 	(W #= 0 #\/ H #= 0) #==> (X #= 0 #/\ W #= 0 #/\ Y #= 0 #/\ H #= 0).
@@ -65,6 +75,16 @@ solve_pizza(Pizza, MinMushroom, MinTomato, MaxPieces, MaxSlices, Slices, TotalSl
 	labeling([max(TotalSliceArea)], SliceVars),
 	% validate ingredients
 	maplist(constrain_ingredients(Pizza, MinMushroom, MinTomato), Slices).
+
+solvefromfile(Filename, MaxSlices, Slices, Area) :-
+	open(Filename, read, Stream),
+	readpizza(Stream, Rows, Columns, IngPerSlice, CellsPerSlice, Pizza),
+	solve_pizza(Pizza, IngPerSlice, IngPerSlice, CellsPerSlice, MaxSlices, Slices, Area),
+	close(Stream).
+	
+solvefromstdin(MaxSlices, Slices, Area) :-
+	readpizza(user_input, Rows, Columns, IngPerSlice, CellsPerSlice, Pizza),
+	solve_pizza(Pizza, IngPerSlice, IngPerSlice, CellsPerSlice, MaxSlices, Slices, Area).
 
 constrain_pizza_slices(Pizza, MaxPieces, MaxSlices, Slices, TotalSliceArea) :-
 	% inputs
