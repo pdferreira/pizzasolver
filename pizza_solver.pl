@@ -108,26 +108,26 @@ constrain_pizza_slices(Pizza, MaxPieces, MaxSlices, Slices, TotalSliceArea) :-
 pieces_in_slice([], slice(_, _, _, _), []).
 pieces_in_slice([_|_], slice(_, _, _, 0), []).
 pieces_in_slice([P|Ps], slice(X, W, 0, H), Cut) :-
-	H > 0,
+	H #> 0,
 	pieces_in_line(P, X, W, CutP),
-	Hm1 is H - 1,
+	Hm1 #= H - 1,
 	pieces_in_slice(Ps, slice(X, W, 0, Hm1), CutPs),
 	append(CutP, CutPs, Cut).
 pieces_in_slice(Pizza, slice(X, W, Y, H), Pieces) :-
-	Y > 0,
-	H > 0,
-	Ym1 is Y - 1,
+	Y #> 0,
+	H #> 0,
+	Ym1 #= Y - 1,
 	pieces_in_slice(Pizza, slice(X, W, Ym1, H), Pieces).
 	
 pieces_in_line([], _, _, []).
 pieces_in_line([_|_], _, 0, []).
 pieces_in_line([V|Vs], 0, W, [V|CutVs]) :-
-	W > 0,
-	Wm1 is W - 1,
+	W #> 0,
+	Wm1 #= W - 1,
 	pieces_in_line(Vs, 0, Wm1, CutVs).
 pieces_in_line([_|Vs], X, W, CutVs) :-
-	X > 0,
-	W > 0,
-	Xm1 is X - 1,
+	X #> 0,
+	W #> 0,
+	Xm1 #= X - 1,
 	pieces_in_line(Vs, Xm1, W, CutVs).
 	
