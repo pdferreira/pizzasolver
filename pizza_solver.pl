@@ -78,18 +78,18 @@ solve_pizza(Pizza, MinMushroom, MinTomato, MaxPieces, MaxSlices, Slices, TotalSl
 
 solvefromfile(Filename, MaxSlices, Slices, Area) :-
 	open(Filename, read, Stream),
-	readpizza(Stream, Rows, Columns, IngPerSlice, CellsPerSlice, Pizza),
+	readpizza(Stream, _, _, IngPerSlice, CellsPerSlice, Pizza),
 	close(Stream),
 	solve_pizza(Pizza, IngPerSlice, IngPerSlice, CellsPerSlice, MaxSlices, Slices, Area).
 	
 solvefromstdin(MaxSlices, Slices, Area) :-
-	readpizza(user_input, Rows, Columns, IngPerSlice, CellsPerSlice, Pizza),
+	readpizza(user_input, _, _, IngPerSlice, CellsPerSlice, Pizza),
 	solve_pizza(Pizza, IngPerSlice, IngPerSlice, CellsPerSlice, MaxSlices, Slices, Area).
 
 constrain_pizza_slices(Pizza, MaxPieces, MaxSlices, Slices, TotalSliceArea) :-
 	% inputs
 	length(Pizza, R),
-	Pizza = [P|Ps],
+	Pizza = [P|_],
 	length(P, C),
     % variables
 	length(Slices, MaxSlices),
